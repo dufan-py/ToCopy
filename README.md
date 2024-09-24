@@ -6,7 +6,7 @@
 2. In the terminal, type the following commands: 
 **gh repo clone Fall24-Lab-EECS149-249a/lf-3pi-dufan-py**
 
-**cd lf-3pi-dufan-py**
+    **cd lf-3pi-dufan-py**
 
 https://www.lf-lang.org/embedded-lab/Sensors.html (3.4 ls dev/ttyACM*)
 
