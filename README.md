@@ -7,6 +7,9 @@
 **gh repo clone Fall24-Lab-EECS149-249a/lf-3pi-dufan-py**
 
     **cd lf-3pi-dufan-py**
+3. create a new branch and switch to it **git checkout -b lab<x>**
+4. push back  **git add .**
+      **git commit -m "message"**
 
 https://www.lf-lang.org/embedded-lab/Sensors.html (3.4 ls dev/ttyACM*)
 
