@@ -15,7 +15,9 @@
 
    
       **git push origin lab<x>**
-https://www.lf-lang.org/embedded-lab/Sensors.html (3.4 ls dev/ttyACM*)
+
+   
+https://www.lf-lang.org/embedded-lab/Sensors.html 
 
 
 tinyurl.com/24-149lab0
