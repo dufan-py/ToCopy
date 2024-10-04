@@ -26,3 +26,62 @@ tinyurl.com/24-149lab0
 proj1 doc: https://docs.google.com/document/d/1wJozeWa6TKpmjZbWJ9P1M-wfDc4eT2cJVSWn8u27-ls/edit
 
 
+/**
+ * Display three dimensions of accelerometer measurements on the LCD display of the
+ * <a href="https://www.pololu.com/docs/0J86">Pololu 3pi+ 2040 robot</a>. To run this program, first
+ * put the robot in BOOTSEL mode (hold button B while resetting). Then the sequence of commands is
+ * something like this:
+ * ```
+ *     $ cd ~/lf-pico
+ *     $ lfc src/AccelerometerDisplay.lf
+ *     ...
+ *     $ picotool load -x bin/AccelerometerDisplay.elf
+ * ```
+
+ *
+ * This compiles the program, loads it into flash memory on the robot, and begins executing it.
+ *
+ * @author Edward A. Lee
+ */
+ target C {
+    platform: "RP2040",
+    single-threaded: true
+  }
+  
+  import AcceCDegree from "lib/Tilt.lf"
+  import Accelerometer from "lib/IMU.lf"
+  import Display from "lib/Display.lf"
+  
+  main reactor {
+    a = new Accelerometer()
+    d = new Display()
+    c = new AcceCDegree()
+    timer t(0, 250 msec)
+  
+    reaction(t) -> a.trigger {=
+      lf_set(a.trigger, true);
+    =}
+    reaction(a.x, a.y, a.z)->c.x,c.y,c.z{=
+        lf_set(c.x , a.x->value);
+        lf_set(c.y , a.y->value);
+        lf_set(c.z , a.z->value);
+    =}
+
+
+    reaction(c.xDegree, c.yDegree, c.zDegree) -> d.line0, d.line1, d.line2 {=
+      /// TODO: define max string size for line
+      /// based on font you can have 4 or 8 lines
+      static char buf0[17];
+      static char buf1[17];
+      static char buf2[17];
+      
+      snprintf(buf0, 17, "x:%2.4f", c.xDegree->value);
+      snprintf(buf1, 17, "y:%2.4f", c.yDegree->value);
+      snprintf(buf2, 17, "z:%2.4f", c.zDegree->value);
+  
+      lf_set(d.line0, buf0);
+      lf_set(d.line1, buf1);
+      lf_set(d.line2, buf2);
+    =}
+  }
+  
