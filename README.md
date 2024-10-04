@@ -27,45 +27,37 @@ proj1 doc: https://docs.google.com/document/d/1wJozeWa6TKpmjZbWJ9P1M-wfDc4eT2cJV
 
 
 
- target C {
-    platform: "RP2040",
+
+
+
+target C {
+    platform: {
+      name: "rp2040",
+      board: "pololu_3pi_2040_robot"
+    },
     single-threaded: true
   }
   
-  import AcceCDegree from "lib/Tilt.lf"
-  import Accelerometer from "lib/IMU.lf"
-  import Display from "lib/Display.lf"
+  preamble {=
+    #include <stdio.h>
+    #include <pico/stdlib.h>
+    #include <hardware/gpio.h>
+    #include<math.h>
+  =}
   
-  main reactor {
-    a = new Accelerometer()
-    d = new Display()
-    c = new AcceCDegree()
-    timer t(0, 250 msec)
+  reactor AcceCDegree{
+    input x:float
+    input y:float
+    input z:float
+    output xDegree:float
+    output yDegree:float
+    output zDegree:float
   
-    reaction(t) -> a.trigger {=
-      lf_set(a.trigger, true);
-    =}
-    reaction(a.x, a.y, a.z)->c.x,c.y,c.z{=
-        lf_set(c.x , a.x->value);
-        lf_set(c.y , a.y->value);
-        lf_set(c.z , a.z->value);
-    =}
-
-
-    reaction(c.xDegree, c.yDegree, c.zDegree) -> d.line0, d.line1, d.line2 {=
-      /// TODO: define max string size for line
-      /// based on font you can have 4 or 8 lines
-      static char buf0[17];
-      static char buf1[17];
-      static char buf2[17];
-      
-      snprintf(buf0, 17, "x:%2.4f", c.xDegree->value);
-      snprintf(buf1, 17, "y:%2.4f", c.yDegree->value);
-      snprintf(buf2, 17, "z:%2.4f", c.zDegree->value);
-  
-      lf_set(d.line0, buf0);
-      lf_set(d.line1, buf1);
-      lf_set(d.line2, buf2);
+    reaction(x,y,z)->xDegree,yDegree,zDegree {=
+      lf_set(xDegree,acos(x->value)*180/M_PI);
+      lf_set(zDegree,acos(z->value)*180/M_PI);
+      lf_set(yDegree,acos(y->value)*180/M_PI);
     =}
   }
+
   
