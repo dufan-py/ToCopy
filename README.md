@@ -26,23 +26,7 @@ tinyurl.com/24-149lab0
 proj1 doc: https://docs.google.com/document/d/1wJozeWa6TKpmjZbWJ9P1M-wfDc4eT2cJVSWn8u27-ls/edit
 
 
-/**
- * Display three dimensions of accelerometer measurements on the LCD display of the
- * <a href="https://www.pololu.com/docs/0J86">Pololu 3pi+ 2040 robot</a>. To run this program, first
- * put the robot in BOOTSEL mode (hold button B while resetting). Then the sequence of commands is
- * something like this:
- * ```
- *     $ cd ~/lf-pico
- *     $ lfc src/AccelerometerDisplay.lf
- *     ...
- *     $ picotool load -x bin/AccelerometerDisplay.elf
- * ```
 
- *
- * This compiles the program, loads it into flash memory on the robot, and begins executing it.
- *
- * @author Edward A. Lee
- */
  target C {
     platform: "RP2040",
     single-threaded: true
