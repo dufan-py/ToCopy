@@ -29,35 +29,6 @@ proj1 doc: https://docs.google.com/document/d/1wJozeWa6TKpmjZbWJ9P1M-wfDc4eT2cJV
 
 
 
-
-target C {
-    platform: {
-      name: "rp2040",
-      board: "pololu_3pi_2040_robot"
-    },
-    single-threaded: true
-  }
-  
-  preamble {=
-    #include <stdio.h>
-    #include <pico/stdlib.h>
-    #include <hardware/gpio.h>
-    #include<math.h>
-  =}
-  
-  reactor AcceCDegree{
-    input x:float
-    input y:float
-    input z:float
-    output xDegree:float
-    output yDegree:float
-    output zDegree:float
-  
-    reaction(x,y,z)->xDegree,yDegree,zDegree {=
-      lf_set(xDegree,acos(x->value)*180/M_PI);
-      lf_set(zDegree,acos(z->value)*180/M_PI);
-      lf_set(yDegree,acos(y->value)*180/M_PI);
-    =}
-  }
+Cal
 
   
