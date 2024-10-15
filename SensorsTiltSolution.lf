@@ -1,0 +1,27 @@
+target C {
+    platform: {
+      name: "rp2040",
+      board: "pololu_3pi_2040_robot"
+    },
+    single-threaded: true
+  }
+  
+  preamble {=
+    #include <ir_sensors.h>
+  =}
+  
+  reactor Tilt {
+    input xg: float
+    input yg: float
+    input zg: float
+    output pitch: float
+    output roll: float
+  
+  
+    reaction(xg, yg, zg) -> pitch, roll {=
+    
+    lf_set(pitch, atan(xg->value / sqrt(pow(yg->value,2) + pow(zg->value,2)))* -180 / 3.1415926);
+    lf_set(roll, atan(yg->value / sqrt((xg->value * xg->value) + (zg->value * zg->value)))* -180 / 3.1415926);
+    =}
+  }
+  

@@ -1,0 +1,283 @@
+
+target C {
+    platform: {
+      name: "rp2040",
+      board: "pololu_3pi_2040_robot"
+    },
+    single-threaded: true
+  }
+  
+  import Line from "lib/Line.lf"
+  import Display from "lib/Display.lf"
+  import Motors from "lib/Motors.lf"
+  import Encoders from "lib/Encoders.lf"
+  import GyroAngle from "lib/IMU.lf"
+  import Tilt from "lib/SensorsTiltSolution.lf"
+  import Accelerometer from "lib/IMU.lf"
+
+  
+  reactor AngleToDistance {
+    input left_encoder: int32_t
+    input right_encoder: int32_t
+    output avg_dist : int32_t
+    display = new Display()
+    reaction(left_encoder, right_encoder) -> avg_dist, display.line0 {=
+      lf_set(avg_dist, (((((left_encoder->value) * 9.9745))/360) + ((((right_encoder->value) * 9.9745))/360)) / 2);
+      static char buf[17];
+      snprintf(buf, 17, "%d", (avg_dist->value));
+      lf_set(display.line0, buf);
+    =}
+  }
+  
+  reactor LineDetect {
+    input left:bool
+    input right:bool
+    input center: bool
+    input dist:int32_t
+    input z_rad:float;
+    input roll: float;
+    input pitch:float;
+    motor = new Motors()
+    display = new Display()
+    state prev_dist:int32_t
+    state evade_dir:int32_t //0 -> sensed left, 1-> sensed right, 2 -> sensed center
+    state angle: float = 0
+    state flat_count:int = 0
+    initial mode ORIENT_UP {
+        reaction (dist, pitch, roll ) -> reset(DRIVE_UP),display.line2 ,motor.left_power, motor.right_power {=
+          if (pitch->value < -10 && (abs(roll->value) < 1.5)) {
+            lf_set(motor.left_power, 0.212f);
+            lf_set(motor.right_power, 0.2f);
+            static char buf1[17];
+            snprintf(buf1, 17, "init%d", (dist->value));
+            lf_set(display.line2, buf1);
+            lf_set_mode(DRIVE_UP);
+          } else {
+            static char buf1[17];
+            snprintf(buf1, 17, "R%fP%f", (roll->value), pitch->value);
+            if (roll->value < 0) {
+              lf_set(motor.left_power, -0.1f);
+              lf_set(motor.right_power, 0.1f);  
+            } else {
+              lf_set(motor.left_power, 0.1f);
+              lf_set(motor.right_power, -0.1f);
+            }
+            lf_set(display.line2, buf1);
+          }
+      =}
+    }
+    mode ORIENT_DOWN {
+      reaction (dist, pitch, roll ) -> reset(DRIVE_DOWN),display.line2 ,motor.left_power, motor.right_power {=
+        if (pitch->value > 10 && (abs(roll->value) < 1.5)) {
+          lf_set(motor.left_power, 0.212f);
+          lf_set(motor.right_power, 0.2f);
+          static char buf1[17];
+          snprintf(buf1, 17, "init%d", (dist->value));
+          lf_set(display.line2, buf1);
+          lf_set_mode(DRIVE_DOWN);
+        } else {
+          static char buf1[17];
+          snprintf(buf1, 17, "R%fP%f", (roll->value), pitch->value);
+          if (roll->value > 0) {
+            lf_set(motor.left_power, -0.1f);
+            lf_set(motor.right_power, 0.1f);  
+          } else {
+            lf_set(motor.left_power, 0.1f);
+            lf_set(motor.right_power, -0.1f);
+          }
+          lf_set(display.line2, buf1);
+        }
+    =}
+  }
+    mode DRIVE_UP {
+        reaction(dist, pitch, roll,z_rad) ->reset(ORIENT_UP),reset(TURN_180), motor.left_power, motor.right_power {=
+            if(abs(roll->value)>2){
+              lf_set_mode(ORIENT_UP);
+            }
+            else if( abs(pitch->value) < 3 ){
+              if (self->flat_count > 2) {
+                lf_set(motor.left_power, 0.08f);
+                lf_set(motor.right_power, -0.08f);
+                lf_set_mode(TURN_180);
+                self->angle = z_rad->value;
+                self->flat_count = 0;
+              } else {
+                self->flat_count++;
+              } 
+            } else if (self->flat_count > 0) {
+              self->flat_count = 0;
+            }
+        =}
+
+    }
+    mode DRIVE_DOWN {
+      reaction(dist, pitch, roll,z_rad) ->reset(ORIENT_DOWN), motor.left_power, motor.right_power {=
+
+          if(abs(roll->value)>2){
+            lf_set_mode(ORIENT_DOWN);
+          }
+
+      =}
+
+  }
+
+    mode TURN_180 {
+        reaction(dist, z_rad) -> reset(DRIVE_DOWN), display.line0, display.line1, motor.left_power, motor.right_power {=
+            static char buf1[17];
+            snprintf(buf1, 17,"t:%f", self->angle - z_rad->value);
+            lf_set(display.line0, buf1);
+            if (abs(self->angle - z_rad->value) >= 168) {
+                lf_set_mode(DRIVE_DOWN);
+
+                lf_set(motor.left_power, 0.212f);
+                lf_set(motor.right_power, 0.2f);
+          }
+        =}
+    }
+    // mode EVADE_TURN {
+    //     reaction (z_rad, dist) -> reset(DRIVE),display.line0, motor.left_power, motor.right_power {=
+    //         static char buf1[17];
+    //         snprintf(buf1, 17, "Turning Away");
+    //         lf_set(display.line0, buf1);
+    //         if (abs(z_rad->value - self->angle) >= 45) {
+    //           lf_set_mode(DRIVE);
+    //           self->prev_dist = dist->value;
+    //           lf_set(motor.left_power, 0.3f);
+    //           lf_set(motor.right_power, 0.3f);
+    //         }
+    //         // static char buf[17];
+    //         // snprintf(buf, 17, "T%f", (z_rad->value));
+    //         // lf_set(notify, buf);
+    //       =}
+    // }
+  }
+
+  
+  main reactor(calibration_time: time = 10 s, sample_period: time = 100 ms) {
+    line = new Line()
+    //disp = new Display()
+
+    //timer t(0, 100ms)
+    timer t1(0, sample_period)
+    timer end_calibration(calibration_time)
+    timer seconds(0, 1 s) 
+    state count: int = 0
+    accel = new Accelerometer()
+    ATD = new AngleToDistance()
+    encoder = new Encoders()
+    encoder.left -> ATD.left_encoder
+    encoder.right -> ATD.right_encoder
+    gyro = new GyroAngle()
+    detect = new LineDetect()
+    tilt = new Tilt();
+    
+    accel.x -> tilt.xg
+    accel.z -> tilt.zg
+    accel.y -> tilt.yg
+    tilt.pitch -> detect.pitch
+    tilt.roll -> detect.roll
+    
+    gyro.z -> detect.z_rad
+    ATD.avg_dist -> detect.dist
+
+
+/////////////////////////////////////////////////////////////////////////////////
+//without display
+      // reaction(end_calibration) -> line.calibrate {=
+      //   lf_set(line.calibrate, false);
+      // =}
+  
+      // reaction(t) -> line.trigger{=
+      //   lf_set(line.trigger, true);
+      // //   static char buf2[17];
+      // //   lf_set(disp.line2, buf2);
+      // =}
+      
+      reaction(t1) -> encoder.trigger, gyro.trigger, accel.trigger{=
+          lf_set(gyro.trigger, true);
+          lf_set(encoder.trigger, true);
+          lf_set(accel.trigger, true);
+          // static char buf3[17];
+          // lf_set(disp.line3, buf3);
+        =} 
+
+  //detect.left, detect.center, detect.right, 
+      reaction(line.reflect) -> detect.left,detect.right {=
+        if(line.reflect->value[0]>700 || line.reflect->value[1]>700){
+          lf_set(detect.left, true);
+        } else {
+          //snprintf(buf0, 17, "a");
+        }
+        if(line.reflect->value[3]>700 || line.reflect->value[4]>700){
+          lf_set(detect.right, true);
+          //snprintf(buf1, 17, "right,3:%4d 4:%4d", line.reflect->value[3], line.reflect->value[4]);
+        } else {
+          //snprintf(buf1, 17, "b");
+        }
+        if(line.reflect->value[1]>700 || line.reflect->value[2]>700 || line.reflect->value[3]>700) {
+          //lf_set(detect.center, true);
+        } else {
+        }
+      =}
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+//     reaction(startup) -> disp.line0{=
+//       lf_set(disp.line0, "CALIBRATING");
+//     =}
+//      reaction(seconds) -> disp.line3 {=
+//         static char buf[17];
+//         snprintf(buf, 17, "time:%8d s", self->count++);
+//         lf_set(disp.line3, buf);
+//       =}
+//     reaction(end_calibration) -> line.calibrate,disp.line0 {=
+//       lf_set(line.calibrate, false);
+//       static char buf3[17];
+//       snprintf(buf3, 17, "end_cali");
+//       lf_set(disp.line0, buf3);
+//     =}
+
+//     reaction(t) -> line.trigger,disp.line2 {=
+//       lf_set(line.trigger, true);
+//     //   static char buf2[17];
+//     //   lf_set(disp.line2, buf2);
+//     =}
+    
+//     // reaction(t1) -> encoder.trigger, gyro.trigger ,disp.line3{=
+//     //     lf_set(gyro.trigger, true);
+//     //     lf_set(encoder.trigger, true);
+//     //     // static char buf3[17];
+//     //     // lf_set(disp.line3, buf3);
+//     //   =} 
+
+
+// //detect.left, detect.center, detect.right, 
+//     reaction(line.reflect) -> disp.line0, disp.line1, disp.line2 {=
+//       static char buf0[17];
+//       static char buf1[17];
+//       static char buf2[17];
+//       snprintf(buf1, 17, "%4d %4d %4d", line.reflect->value[0], line.reflect->value[2], line.reflect->value[4]);
+//       if(line.reflect->value[0]>500 || line.reflect->value[1]>500){
+//         //lf_set(detect.left, true);
+//       } else {
+//         //snprintf(buf0, 17, "a");
+//       }
+//       if(line.reflect->value[3]>500 || line.reflect->value[4]>500){
+//         //lf_set(detect.right, true);
+//         //snprintf(buf1, 17, "right,3:%4d 4:%4d", line.reflect->value[3], line.reflect->value[4]);
+//       } else {
+//         //snprintf(buf1, 17, "b");
+//       }
+//       if(line.reflect->value[1]>500 || line.reflect->value[2]>500 || line.reflect->value[3]>500) {
+//         //lf_set(detect.center, true);
+//        snprintf(buf2, 17, "center,2:%4d", line.reflect->value[1]);
+//       } else {
+//         snprintf(buf2, 17, "c");
+//       }
+//     //   snprintf(buf1, 17, "2:%4d 3:%4d", line.reflect->value[2], line.reflect->value[3]);
+//     //   snprintf(buf2, 17, "4:%4d", line.reflect->value[4]);
+//     //  lf_set(disp.line0, buf0);
+//       lf_set(disp.line1, buf1);
+//       lf_set(disp.line2, buf2);
+//     =}
+  }
+  
