@@ -33,5 +33,10 @@ https://classroom.github.com/a/03KlHsiw
 
 python3 detect.py --source 'libcamerasrc ! video/x-raw,width=640,height=480,framerate=30/1 ! videoconvert ! videoscale ! appsink' --weights yolov5s.pt --conf 0.25
 
+Traceback (most recent call last):
+  File "/home/pi/yolov5/test-yo.py", line 2, in <module>
+    from picamera2 import Picamera2
+  File "/home/pi/yolov5/.venv/lib/python3.11/site-packages/picamera2/__init__.py", line 4, in <module>
+    import libcamera
+ModuleNotFoundError: No module named 'libcamera'
 
-https://docs.ultralytics.com/guides/raspberry-pi/#use-raspberry-pi-camera
