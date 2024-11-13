@@ -31,6 +31,9 @@ proj1 doc: https://docs.google.com/document/d/1wJozeWa6TKpmjZbWJ9P1M-wfDc4eT2cJV
 https://classroom.github.com/a/03KlHsiw
 
 
+python3 detect.py --source 'libcamerasrc ! video/x-raw,width=640,height=480,framerate=30/1 ! videoconvert ! videoscale ! appsink' --weights yolov5s.pt --conf 0.25
+
+
 
 Cal
 
