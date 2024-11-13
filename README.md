@@ -33,6 +33,11 @@ https://classroom.github.com/a/03KlHsiw
 
 python3 detect.py --source 'libcamerasrc ! video/x-raw,width=640,height=480,framerate=30/1 ! videoconvert ! videoscale ! appsink' --weights yolov5s.pt --conf 0.25
 
+
 python3 -m venv .venv
+
+
 source .venv/bin/activate
+
+
 python3 -m pip install -r requirement.txt
