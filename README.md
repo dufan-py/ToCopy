@@ -35,6 +35,6 @@ python3 detect.py --source 'libcamerasrc ! video/x-raw,width=640,height=480,fram
 
 
 
-Cal
+rpicam-vid -t 10000 --codec libav --libav-format mp4 -o ~/Desktop/video.mp4
 
   
